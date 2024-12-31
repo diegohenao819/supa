@@ -39,6 +39,7 @@ export const signUpAction = async (formData: FormData) => {
   }
 };
 
+
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
