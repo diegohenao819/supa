@@ -1,28 +1,31 @@
 import { signUpAction } from "@/app/actions";
-import { FormMessage, Message } from "@/components/form-message";
+import { FormMessage } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 
-
-export default async function Signup(props: {
-  searchParams: Promise<Message>;
+export default async function Signup({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
 }) {
-  const searchParams = await props.searchParams;
-  if ("message" in searchParams) {
-    return (
-      <div className="w-full flex-1 flex items-center h-screen sm:max-w-md justify-center gap-2 p-4">
-        <FormMessage message={searchParams} />
-      </div>
-    );
-  }
+  const params = await searchParams;
+
+  const message = params.error
+    ? { error: params.error }
+    : params.success
+      ? { success: params.success }
+      : null;
 
   return (
     <>
-      <form className="flex flex-col min-w-64 max-w-64 mx-auto">
+      <form
+        className="flex flex-col min-w-64 max-w-64 mx-auto"
+        action={signUpAction}
+      >
         <h1 className="text-2xl font-medium">Sign up</h1>
-        <p className="text-sm text text-foreground">
+        <p className="text-sm text-foreground">
           Already have an account?{" "}
           <Link className="text-primary font-medium underline" href="/sign-in">
             Sign in
@@ -39,13 +42,42 @@ export default async function Signup(props: {
             minLength={6}
             required
           />
-          <SubmitButton formAction={signUpAction} pendingText="Signing up...">
-            Sign up
-          </SubmitButton>
-          <FormMessage message={searchParams} />
+          <div className="mt-4">
+            <Label htmlFor="role">Role</Label>
+            <div className="flex items-center gap-4 mt-2">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="role"
+                  value="student"
+                  defaultChecked
+                  className="sr-only peer"
+                />
+                <span
+                  className="w-6 h-6 rounded-full border-2 border-gray-400 peer-checked:border-primary peer-checked:bg-primary"
+                  aria-hidden="true"
+                />
+                <span className="ml-2">Student</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="role"
+                  value="teacher"
+                  className="sr-only peer"
+                />
+                <span
+                  className="w-6 h-6 rounded-full border-2 border-gray-400 peer-checked:border-primary peer-checked:bg-primary"
+                  aria-hidden="true"
+                />
+                <span className="ml-2">Teacher</span>
+              </label>
+            </div>
+          </div>
+          <SubmitButton pendingText="Signing up...">Sign up</SubmitButton>
         </div>
       </form>
-     
+      {message && <FormMessage message={message} />}
     </>
   );
 }

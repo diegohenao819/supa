@@ -1,44 +1,61 @@
 "use server";
 
-import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
+import { encodedRedirect } from "@/utils/utils";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-export const signUpAction = async (formData: FormData) => {
+export const signUpAction = async (formData: FormData): Promise<void> => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
-  const supabase = await createClient();
-  const origin = (await headers()).get("origin");
+  const role = formData.get("role")?.toString();
 
-  if (!email || !password) {
-    return encodedRedirect(
-      "error",
-      "/sign-up",
-      "Email and password are required",
-    );
+  const supabase = await createClient();
+
+  if (!email || !password || !role) {
+    redirect(`/sign-up?error=${encodeURIComponent("All fields are required.")}`);
+    return;
   }
 
-  const { error } = await supabase.auth.signUp({
+  // Step 1: Create a new user in Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
   });
 
-  if (error) {
-    console.error(error.code + " " + error.message);
-    return encodedRedirect("error", "/sign-up", error.message);
-  } else {
-    return encodedRedirect(
-      "success",
-      "/sign-up",
-      "Thanks for signing up! Please check your email for a verification link.",
-    );
+  if (authError) {
+    redirect(`/sign-up?error=${encodeURIComponent(authError.message)}`);
+    return;
   }
-};
 
+  const userId = authData.user?.id;
+  const roleId = role === "student" ? 1 : 2;
+
+  // Step 2: Sign in the user immediately after signup
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    redirect(`/sign-up?error=${encodeURIComponent(signInError.message)}`);
+    return;
+  }
+
+  // Step 3: Insert user profile with active session
+  const { error: profileError } = await supabase
+    .from('user_profiles')
+    .insert([{ id: userId, role_id: roleId }]);
+
+  if (profileError) {
+    console.error("Profile creation error:", profileError.message);
+    redirect(`/sign-up?error=${encodeURIComponent("Profile creation failed.")}`);
+    return;
+  }
+
+  // Redirect to protected page on success
+  redirect("/protected");
+};
 
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
@@ -76,7 +93,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
     return encodedRedirect(
       "error",
       "/forgot-password",
-      "Could not reset password",
+      "Could not reset password"
     );
   }
 
@@ -87,7 +104,7 @@ export const forgotPasswordAction = async (formData: FormData) => {
   return encodedRedirect(
     "success",
     "/forgot-password",
-    "Check your email for a link to reset your password.",
+    "Check your email for a link to reset your password."
   );
 };
 
@@ -101,7 +118,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     encodedRedirect(
       "error",
       "/protected/reset-password",
-      "Password and confirm password are required",
+      "Password and confirm password are required"
     );
   }
 
@@ -109,7 +126,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     encodedRedirect(
       "error",
       "/protected/reset-password",
-      "Passwords do not match",
+      "Passwords do not match"
     );
   }
 
@@ -121,7 +138,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     encodedRedirect(
       "error",
       "/protected/reset-password",
-      "Password update failed",
+      "Password update failed"
     );
   }
 
