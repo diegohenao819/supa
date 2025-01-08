@@ -150,3 +150,40 @@ export const signOutAction = async () => {
   await supabase.auth.signOut();
   return redirect("/sign-in");
 };
+
+
+export async function generateAIText(topic: string, level: string, length: string) {
+  const response = await fetch(`http://localhost:3000/api/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      allMessages: [
+        {
+          role: "user",
+          content: `Generate a ${length} text about ${topic} at ${level} level in English`,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate text");
+  }
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+
+  while (reader) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value);
+  }
+
+  return text;
+}
+
+
+
