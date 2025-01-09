@@ -1,41 +1,78 @@
 "use server";
 
+import { quizSchema } from "@/app/reading/schema";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-// Definir el manejador para solicitudes POST con streaming
 export async function POST(request: Request) {
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY!,
   });
 
-  // Leer los datos enviados en el cuerpo de la solicitud
-  const body = await request.json();
+  try {
+    // Leer los datos enviados en el cuerpo de la solicitud
+    const body = await request.json();
 
-  // Crear un stream con OpenAI
-  const stream = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: body.allMessages,
-    stream: true, // Habilitar el streaming
-  });
+    // Solicitar un JSON estructurado desde OpenAI (fixed additionalProperties)
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: body.allMessages,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "quizSchema",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              paragraphs: {
+                type: "array",
+                items: { type: "string" },
+                additionalProperties: false, // ✅ Required
+              },
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    question: { type: "string" },
+                    options: {
+                      type: "array",
+                      items: { type: "string" },
+                      additionalProperties: false, // ✅ Required
+                    },
+                    correctAnswer: { type: "string" },
+                  },
+                  additionalProperties: false, // ✅ Required
+                  required: ["question", "options", "correctAnswer"],
+                },
+                additionalProperties: false, // ✅ Required
+              },
+            },
+            required: ["title", "paragraphs", "questions"],
+            additionalProperties: false, // ✅ Required at root level
+          },
+        },
+      },
+    });
 
-  // Crear un ReadableStream para enviar datos progresivamente al cliente
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      // Leer los datos del stream de OpenAI y enviarlos en chunks
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        controller.enqueue(new TextEncoder().encode(content)); // Enviar el chunk al cliente
-      }
-      controller.close(); // Cerrar el stream cuando termine
-    },
-  });
+    // ✅ FIX: Ensure content is a string before parsing
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("Response content is null or undefined");
+    }
 
-  return new NextResponse(readableStream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+    // Now it's safe to parse since we checked for null
+    const jsonResponse = JSON.parse(content);
+    const validatedQuiz = quizSchema.parse(jsonResponse);
+    // Devolver el JSON validado
+    return NextResponse.json(validatedQuiz, { status: 200 });
+  } catch (error) {
+    console.error("Error generating quiz:", error);
+    return NextResponse.json(
+      { error: "Failed to generate structured quiz" },
+      { status: 500 }
+    );
+  }
 }

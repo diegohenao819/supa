@@ -1,47 +1,36 @@
+// /app/reading/page.tsx
 "use client";
 
-
-import { Header } from "./components/header"
 import { useState } from "react";
-import { Navigation } from "./components/nav"
-import { Sidebar } from "./components/sidebar"
-import { TextGeneratorForm } from "./components/text-generator-form"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { redirect } from "next/navigation"
+import { TextGeneratorForm } from "./components/text-generator-form";
+import { Quiz } from "./schema";
 
-export default function Dashboard() {
-  const [generatedText, setGeneratedText] = useState<string>("");
+export default function ReadingPage() {
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
 
-  
-  
-  // 
-
-
-  
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="py-4">
-        <Navigation />
-      </div>
-      <div className="flex-1 flex gap-6 p-6">
-        <div className="flex-1">
-        <Card>
-        <CardHeader className="space-y-6">
-          <CardTitle>Text Generator</CardTitle>
-          <TextGeneratorForm onTextGenerated={setGeneratedText} />
-        </CardHeader>
-        <CardContent className="prose prose-sm">
-          {generatedText ? (
-            <p>{generatedText}</p>
-          ) : (
-            <p>Generated text will appear here...</p>
-          )}
-        </CardContent>
-      </Card>
+    <div className="min-h-screen p-6">
+      <TextGeneratorForm onQuizGenerated={setQuiz} />
+      
+      {quiz && (
+        <div>
+          <h1 className="text-2xl font-bold mt-6">{quiz.title}</h1>
+          {quiz.paragraphs.map((para, index) => (
+            <p key={index} className="mt-2">{para}</p>
+          ))}
+          
+          <h2 className="text-xl font-semibold mt-6">Quiz Questions</h2>
+          {quiz.questions.map((q, index) => (
+            <div key={index} className="mt-4">
+              <p className="font-medium">{q.question}</p>
+              {q.options.map((option, idx) => (
+                <p key={idx}>{option}</p>
+              ))}
+              <p className="font-bold mt-2">Correct Answer: {q.correctAnswer}</p>
+            </div>
+          ))}
         </div>
-        <Sidebar />
-      </div>
+      )}
     </div>
-  )
+  );
 }

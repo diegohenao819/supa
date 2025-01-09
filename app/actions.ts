@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { encodedRedirect } from "@/utils/utils";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { quizSchema } from "@/app/reading/schema";
 
 export const signUpAction = async (formData: FormData): Promise<void> => {
   const email = formData.get("email")?.toString();
@@ -152,38 +153,24 @@ export const signOutAction = async () => {
 };
 
 
-export async function generateAIText(topic: string, level: string, length: string) {
+export async function generateQuizText(topic: string, level: string) {
   const response = await fetch(`http://localhost:3000/api/chat`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       allMessages: [
         {
           role: "user",
-          content: `Generate a ${length} text about ${topic} at ${level} level in English`,
-        },
-      ],
+          content: `Generate a structured JSON quiz about "${topic}" at ${level} level with 5 paragraphs, 10 questions, 4 options each, and the correct answer.`
+        }
+      ]
     }),
   });
 
   if (!response.ok) {
-    throw new Error("Failed to generate text");
+    throw new Error("Failed to generate quiz data");
   }
 
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-
-  while (reader) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    text += decoder.decode(value);
-  }
-
-  return text;
+  const quizData = await response.json();
+  return quizSchema.parse(quizData);  // Validate response with Zod
 }
-
-
-
