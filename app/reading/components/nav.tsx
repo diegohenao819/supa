@@ -16,7 +16,7 @@ export function Navigation() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-4 justify-center border-b pb-2">
+    <nav className=" w-full flex flex-col md:flex-row justify-center border-b pb-2">
       {navItems.map((item) => (
         <Link
           key={item.href}

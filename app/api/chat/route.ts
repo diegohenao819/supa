@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     // Solicitar un JSON estructurado desde OpenAI (fixed additionalProperties)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: body.allMessages,
       response_format: {
         type: "json_schema",

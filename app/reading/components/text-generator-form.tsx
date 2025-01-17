@@ -32,7 +32,7 @@ export function TextGeneratorForm({ onQuizGenerated }: { onQuizGenerated: (quiz:
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 bg-yellow-300  p-4">
         <FormField control={form.control} name="topic" render={({ field }) => (
           <FormItem>
             <FormLabel>Topic</FormLabel>

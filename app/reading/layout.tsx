@@ -1,5 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import {Navigation} from "./components/nav";
+import {Header} from "./components/header";
+import {Sidebar} from "./components/sidebar";
 
 export const metadata = {
   title: 'Reading Practice',
@@ -21,9 +24,18 @@ export default async function Layout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body>  
+      <Header />
+    <Navigation />
+    
         {children}
+                   
+
       </body>
     </html>
   );
 }
+
+
+
+
