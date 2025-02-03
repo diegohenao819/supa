@@ -5,15 +5,17 @@ import { encodedRedirect } from "@/utils/utils";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { quizSchema } from "@/app/reading/schema";
+import { getUserRole } from "@/utils/auth";
 
 export const signUpAction = async (formData: FormData): Promise<void> => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
   const role = formData.get("role")?.toString();
+  const username = formData.get("username")?.toString();  // NEW
 
   const supabase = await createClient();
 
-  if (!email || !password || !role) {
+  if (!email || !password || !role || !username) {
     redirect(`/sign-up?error=${encodeURIComponent("All fields are required.")}`);
     return;
   }
@@ -44,9 +46,10 @@ export const signUpAction = async (formData: FormData): Promise<void> => {
   }
 
   // Step 3: Insert user profile with active session
+  // NEW: Include the username field in the inserted profile record
   const { error: profileError } = await supabase
     .from('user_profiles')
-    .insert([{ id: userId, role_id: roleId }]);
+    .insert([{ id: userId, role_id: roleId, username }]);
 
   if (profileError) {
     console.error("Profile creation error:", profileError.message);
@@ -57,6 +60,7 @@ export const signUpAction = async (formData: FormData): Promise<void> => {
   // Redirect to protected page on success
   redirect("/protected");
 };
+
 
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
@@ -174,3 +178,49 @@ export async function generateQuizText(topic: string, level: string) {
   const quizData = await response.json();
   return quizSchema.parse(quizData);  // Validate response with Zod
 }
+
+
+
+// CREATE A COURSE
+
+
+export const createCourseAction = async (formData: FormData) => {
+  // Get form values
+  const name = formData.get("name")?.toString();
+  const description = formData.get("description")?.toString() || "";
+
+  if (!name) {
+    // You can handle error feedback here
+    throw new Error("Course name is required");
+  }
+
+  // Create a Supabase client on the server (this uses your cookies for session)
+  const supabase = await createClient();
+
+  // Get the current authenticated user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // If no user is logged in, redirect or throw error
+    redirect("/sign-in");
+    return;
+  }
+
+  // Check the user's role using your helper function
+  const userRole = await getUserRole();
+  if (!userRole || userRole.role.name !== "teacher") {
+    // If the user is not a teacher, do not allow course creation.
+    throw new Error("Only teachers can create courses");
+  }
+
+  // Insert the new course, using the authenticated user's id as teacher_id.
+  const { error } = await supabase
+    .from("courses")
+    .insert([{ teacher_id: user.id, name, description }]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  // Optionally, you can redirect or return success status
+  redirect("/teacher/dashboard");
+};
